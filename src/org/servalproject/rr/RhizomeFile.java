@@ -8,7 +8,13 @@ import java.io.FileInputStream;
 import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.IOException;
+import java.util.HashMap;
+import java.util.Iterator;
+import java.util.LinkedList;
+import java.util.List;
 import java.util.Properties;
+
+import to.yp.cr.NaCl;
 
 import android.content.Intent;
 import android.util.Log;
@@ -22,6 +28,10 @@ public class RhizomeFile {
 	/** TAG for debugging */
 	public static final String TAG = "R2";
 
+	List<byte[]> signatories = null;
+	
+	String path = null;
+	
 	/** The actual file */
 	File file = null;
 
@@ -44,6 +54,7 @@ public class RhizomeFile {
 		file = new File(path, fileName);
 
 		// Create the manifest/meta path if they exists
+		setPath(path.getAbsolutePath());
 		setManifest(path, fileName);
 		setMeta(path, fileName);
 	}
@@ -74,6 +85,10 @@ public class RhizomeFile {
 		RhizomeUtils.CopyFileToDir(file, RhizomeUtils.dirExport);
 	}
 
+	private void setPath(String pathname) {
+		path = pathname;
+	}
+	
 	/**
 	 * @return the file path
 	 */
@@ -138,6 +153,64 @@ public class RhizomeFile {
 			meta = tmp;
 	}
 
+	public boolean isSignedP() {
+		// See if the manifest has been signed
+		byte[] hash = RhizomeUtils.DigestFile(getFile());
+		String signatureFilename = path +"/.signature."+RhizomeUtils.ToHexString(hash);
+		File signatureFile = null;
+		try {
+			signatureFile = new File(signatureFilename);
+			byte[] signature = RhizomeUtils.readFileBytes(signatureFile);
+			// Go through signature data trying each in turn (a file may be signed
+			// by more than one authority).
+			discoverSignatories(signature,hash);
+			Iterator<byte[]> it =signatories.iterator();
+			while (it.hasNext())
+			{
+				byte[] e = it.next();
+				
+				// XXX - Check against our list of trusted signatories
+			}
+		} catch (IOException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		} finally {
+			
+		}
+		
+		return false;
+	}
+	
+	private void discoverSignatories(byte[] signatureData,byte[] hash)
+	{
+		signatories = new LinkedList<byte[]>();
+		int i,j;
+		int signatureBlockSize=NaCl.crypto_sign_PUBLICKEYBYTES+NaCl.crypto_sign_BYTES+hash.length;
+		
+		// Grab each signature in turn and check it.
+		byte[] signatory = new byte[NaCl.crypto_sign_PUBLICKEYBYTES];
+		byte[] sig = new byte[NaCl.crypto_sign_BYTES+hash.length];
+		for(i=0;i<=(signatureData.length-signatureBlockSize);i+=signatureBlockSize) {
+			// Get public key
+			for(j=0;j<signatureBlockSize;j++) signatory[j]=signatureData[i+j];
+			// Get signed data
+			for(j=0;j<sig.length;j++) sig[j]=signatureData[i+NaCl.crypto_sign_PUBLICKEYBYTES+j];
+			// Test the signature
+			NaCl.CryptoSignOpen sigResult = new NaCl.CryptoSignOpen(signatory, sig);
+			if (sigResult.result == 0 && sigResult.message.length >= hash.length) {
+				// Okay, signature tests out, but let's just make sure it was a signature for
+				// this file, and not some other.  This would be bad otherwise.
+				for(j=0;j<hash.length;j++) if (hash[j]!=sigResult.message[j]) break;
+				// XXX - Allow further constraints on the signature, such as expiry dates and
+				// uses.  These can follow the hash in the signed message whe we get that far.
+				
+				// All tests passed, so add this signatory to the list of those who have attested
+				// to the validity of this file.
+				if (j==hash.length) signatories.add(signatory.clone());
+			}
+		}
+	}
+		
 	/*
 	 * (non-Javadoc)
 	 * 
@@ -148,9 +221,10 @@ public class RhizomeFile {
 		StringBuffer ts = new StringBuffer();
 
 		ts.append("-- BOF --\n");
-		ts.append(" File:        " + getFile() + "\n");
-		ts.append(" -> Manifest: " + getManifest() + "\n");
-		ts.append(" -> Meta:     " + getMeta() + "\n");
+		ts.append(" File:                        " + getFile() + "\n");
+		ts.append(" -> Manifest:                 " + getManifest() + "\n");
+		ts.append(" -> Meta:                     " + getMeta() + "\n");
+		ts.append(" -> Trustworthy Signature?:   " + isSignedP()+"\n");
 		ts.append("-- EOF --");
 
 		return ts.toString();

@@ -4,6 +4,7 @@ import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.io.IOException;
+import java.io.InputStream;
 import java.nio.channels.FileChannel;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
@@ -19,6 +20,7 @@ import android.util.Log;
  */
 public class RhizomeUtils {
 
+	private static final long MAX_FILE_SIZE = 0;
 	/**
 	 * Calculates the MD5 digest of the file.
 	 * 
@@ -119,6 +121,31 @@ public class RhizomeUtils {
 		path.delete();
 	}
 
+	public static byte[] readFileBytes(File file) throws IOException {
+
+	    if ( file.length() > MAX_FILE_SIZE ) {
+	        throw new IOException(file.getAbsolutePath());
+	    }
+
+
+	    byte []buffer = new byte[(int) file.length()];
+	    InputStream ios = null;
+	    try {
+	        ios = new FileInputStream(file);
+	        if ( ios.read(buffer) == -1 ) {
+	            throw new IOException("EOF reached while trying to read the whole file");
+	        }        
+	    } finally { 
+	        try {
+	             if ( ios != null ) 
+	                  ios.close();
+	        } catch ( IOException e) {
+	        }
+	    }
+
+	    return buffer;
+	}
+	
 	/** Directory where the files are exported */
 	public static final File dirExport = new File(
 			Environment.getExternalStorageDirectory(), "/serval-rhizome-export");
