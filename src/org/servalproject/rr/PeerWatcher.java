@@ -79,8 +79,9 @@ public class PeerWatcher extends Thread {
 
 		String[] peers = peerList.getPeerList();
 		for (String peer : peers) {
+			if (peer.indexOf(" ")!=-1) peer = peer.substring(0,peer.indexOf(" "));
 			Log.v(TAG, "PEER : " + peer);
-			ret.add(peer + ":/" + Main.SERVER_PORT + "/");
+			ret.add("http://"+peer + ":" + Main.SERVER_PORT + "/");
 		}
 
 		return ret;

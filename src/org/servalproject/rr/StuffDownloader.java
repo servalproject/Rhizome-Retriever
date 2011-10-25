@@ -202,11 +202,20 @@ public class StuffDownloader {
 			BufferedReader in = new BufferedReader(new InputStreamReader(
 					repoURL.openStream()));
 
+			String repositoryPrefix = repository;
+			if (repository.lastIndexOf(":")!=-1)
+				repositoryPrefix = repository.substring(0,repository.lastIndexOf(":"));
+			
 			// Read each line
 			String inputLine;
 			while ((inputLine = in.readLine()) != null) {
 				if (inputLine.trim().startsWith("http")) {
 					// Feed them to the manifest
+					// But replace any references to http://0.0.0.0 with the real IP of the node
+					if (inputLine.startsWith("http://0.0.0.0:"))
+					{
+						inputLine=repositoryPrefix+inputLine.substring(14);
+					}
 					manifests.add(inputLine);
 				}
 			}
