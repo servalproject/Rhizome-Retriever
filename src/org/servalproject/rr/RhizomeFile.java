@@ -29,9 +29,9 @@ public class RhizomeFile {
 	public static final String TAG = "R2";
 
 	List<byte[]> signatories = null;
-	
+
 	String path = null;
-	
+
 	/** The actual file */
 	File file = null;
 
@@ -70,8 +70,8 @@ public class RhizomeFile {
 		file.delete();
 		if (manifest != null)
 			manifest.delete();
-//		if (meta != null)
-//			meta.delete();
+		// if (meta != null)
+		// meta.delete();
 	}
 
 	/**
@@ -88,7 +88,7 @@ public class RhizomeFile {
 	private void setPath(String pathname) {
 		path = pathname;
 	}
-	
+
 	/**
 	 * @return the file path
 	 */
@@ -156,61 +156,73 @@ public class RhizomeFile {
 	public boolean isSignedP() {
 		// See if the manifest has been signed
 		byte[] hash = RhizomeUtils.DigestFile(getFile());
-		String signatureFilename = path +"/.signature."+RhizomeUtils.ToHexString(hash);
+		String signatureFilename = path + "/.signature."
+				+ RhizomeUtils.ToHexString(hash);
 		File signatureFile = null;
 		try {
 			signatureFile = new File(signatureFilename);
 			byte[] signature = RhizomeUtils.readFileBytes(signatureFile);
-			// Go through signature data trying each in turn (a file may be signed
+			// Go through signature data trying each in turn (a file may be
+			// signed
 			// by more than one authority).
-			discoverSignatories(signature,hash);
-			Iterator<byte[]> it =signatories.iterator();
-			while (it.hasNext())
-			{
+			discoverSignatories(signature, hash);
+			Iterator<byte[]> it = signatories.iterator();
+			while (it.hasNext()) {
 				byte[] e = it.next();
-				
+
 				// XXX - Check against our list of trusted signatories
 			}
 		} catch (IOException e) {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
 		} finally {
-			
+
 		}
-		
+
 		return false;
 	}
-	
-	private void discoverSignatories(byte[] signatureData,byte[] hash)
-	{
+
+	private void discoverSignatories(byte[] signatureData, byte[] hash) {
 		signatories = new LinkedList<byte[]>();
-		int i,j;
-		int signatureBlockSize=NaCl.crypto_sign_PUBLICKEYBYTES+NaCl.crypto_sign_BYTES+hash.length;
-		
+		int i, j;
+		int signatureBlockSize = NaCl.crypto_sign_PUBLICKEYBYTES
+				+ NaCl.crypto_sign_BYTES + hash.length;
+
 		// Grab each signature in turn and check it.
 		byte[] signatory = new byte[NaCl.crypto_sign_PUBLICKEYBYTES];
-		byte[] sig = new byte[NaCl.crypto_sign_BYTES+hash.length];
-		for(i=0;i<=(signatureData.length-signatureBlockSize);i+=signatureBlockSize) {
+		byte[] sig = new byte[NaCl.crypto_sign_BYTES + hash.length];
+		for (i = 0; i <= (signatureData.length - signatureBlockSize); i += signatureBlockSize) {
 			// Get public key
-			for(j=0;j<signatureBlockSize;j++) signatory[j]=signatureData[i+j];
+			for (j = 0; j < signatureBlockSize; j++)
+				signatory[j] = signatureData[i + j];
 			// Get signed data
-			for(j=0;j<sig.length;j++) sig[j]=signatureData[i+NaCl.crypto_sign_PUBLICKEYBYTES+j];
+			for (j = 0; j < sig.length; j++)
+				sig[j] = signatureData[i + NaCl.crypto_sign_PUBLICKEYBYTES + j];
 			// Test the signature
-			NaCl.CryptoSignOpen sigResult = new NaCl.CryptoSignOpen(signatory, sig);
-			if (sigResult.result == 0 && sigResult.message.length >= hash.length) {
-				// Okay, signature tests out, but let's just make sure it was a signature for
-				// this file, and not some other.  This would be bad otherwise.
-				for(j=0;j<hash.length;j++) if (hash[j]!=sigResult.message[j]) break;
-				// XXX - Allow further constraints on the signature, such as expiry dates and
-				// uses.  These can follow the hash in the signed message whe we get that far.
-				
-				// All tests passed, so add this signatory to the list of those who have attested
+			NaCl.CryptoSignOpen sigResult = new NaCl.CryptoSignOpen(signatory,
+					sig);
+			if (sigResult.result == 0
+					&& sigResult.message.length >= hash.length) {
+				// Okay, signature tests out, but let's just make sure it was a
+				// signature for
+				// this file, and not some other. This would be bad otherwise.
+				for (j = 0; j < hash.length; j++)
+					if (hash[j] != sigResult.message[j])
+						break;
+				// XXX - Allow further constraints on the signature, such as
+				// expiry dates and
+				// uses. These can follow the hash in the signed message whe we
+				// get that far.
+
+				// All tests passed, so add this signatory to the list of those
+				// who have attested
 				// to the validity of this file.
-				if (j==hash.length) signatories.add(signatory.clone());
+				if (j == hash.length)
+					signatories.add(signatory.clone());
 			}
 		}
 	}
-		
+
 	/*
 	 * (non-Javadoc)
 	 * 
@@ -224,7 +236,7 @@ public class RhizomeFile {
 		ts.append(" File:                        " + getFile() + "\n");
 		ts.append(" -> Manifest:                 " + getManifest() + "\n");
 		ts.append(" -> Meta:                     " + getMeta() + "\n");
-		ts.append(" -> Trustworthy Signature?:   " + isSignedP()+"\n");
+		ts.append(" -> Trustworthy Signature?:   " + isSignedP() + "\n");
 		ts.append("-- EOF --");
 
 		return ts.toString();
@@ -237,7 +249,7 @@ public class RhizomeFile {
 	 * 
 	 * @param fileName
 	 *            The name of the incoming file
-	 * @param version 
+	 * @param version
 	 */
 	public static void GenerateMetaForFilename(String fileName, float version) {
 		try {
@@ -247,10 +259,11 @@ public class RhizomeFile {
 			metaP.put("date", System.currentTimeMillis() + "");
 			metaP.put("read", false + ""); // the file is just created
 			metaP.put("marked_expiration", false + ""); // Just imported
-			metaP.put("version", version +""); 
-			
+			metaP.put("version", version + "");
+
 			// Save the file
-			File tmpMeta = new File(RhizomeUtils.dirRhizome, "." + fileName + ".meta");
+			File tmpMeta = new File(RhizomeUtils.dirRhizome, "." + fileName
+					+ ".meta");
 			Log.v(TAG, tmpMeta + "");
 			metaP.store(new FileOutputStream(tmpMeta), "Rhizome meta data for "
 					+ fileName);
@@ -258,6 +271,40 @@ public class RhizomeFile {
 			Log.e(TAG, "Error when creating meta for " + fileName);
 			e.printStackTrace();
 		}
+	}
+
+	/**
+	 * Get the author. Assumes that the manifest file exists.
+	 * 
+	 * @return The author
+	 */
+	public String getAuthor() {
+		String author = "";
+		try {
+			Properties metaP = new Properties();
+			metaP.load(new FileInputStream(this.manifest));
+			author = metaP.getProperty("author");
+		} catch (IOException e) {
+			e.printStackTrace();
+		}
+		return author;
+	}
+
+	/**
+	 * Get the version. Assumes that the manifest file exists.
+	 * 
+	 * @return The file version
+	 */
+	public float getVersion() {
+		float version = 1.0f;
+		try {
+			Properties metaP = new Properties();
+			metaP.load(new FileInputStream(this.manifest));
+			version = Float.parseFloat(metaP.getProperty("version"));
+		} catch (IOException e) {
+			e.printStackTrace();
+		}
+		return version;
 	}
 
 	/**
@@ -283,9 +330,10 @@ public class RhizomeFile {
 			manifestP.put("version", version + "");
 			manifestP.put("date", System.currentTimeMillis() + "");
 			// The locally computed
-			manifestP.put("size", new File(RhizomeUtils.dirRhizome, fileName).length()
-					+ "");
-			manifestP.put("hash", RhizomeUtils.ToHexString(RhizomeUtils.DigestFile(new File(RhizomeUtils.dirRhizome, fileName))));
+			manifestP.put("size",
+					new File(RhizomeUtils.dirRhizome, fileName).length() + "");
+			manifestP.put("hash", RhizomeUtils.ToHexString(RhizomeUtils
+					.DigestFile(new File(RhizomeUtils.dirRhizome, fileName))));
 
 			// Save the file
 			File tmpManifest = new File(RhizomeUtils.dirRhizome, "." + fileName

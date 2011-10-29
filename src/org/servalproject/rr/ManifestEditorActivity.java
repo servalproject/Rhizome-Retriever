@@ -6,6 +6,7 @@ package org.servalproject.rr;
 import android.app.Activity;
 import android.content.Intent;
 import android.os.Bundle;
+import android.util.Log;
 import android.view.View;
 import android.view.View.OnClickListener;
 import android.widget.Button;
@@ -21,21 +22,20 @@ import android.widget.EditText;
 public class ManifestEditorActivity extends Activity implements OnClickListener {
 	/** TAG for debugging */
 	public static final String TAG = "R2";
-	
+
 	/** Content of the author field on the form */
 	private String author;
-	
+
 	/** Content of the version field on the form */
 	private String version;
 
 	@Override
 	public void onClick(View v) {
 		// Extract the data from the form
-		author = ((EditText) findViewById(R.id.me_author)).getText()
-				.toString();
+		author = ((EditText) findViewById(R.id.me_author)).getText().toString();
 		version = ((EditText) findViewById(R.id.me_version)).getText()
 				.toString();
-		
+
 		// Fill the intent
 		Intent intent = this.getIntent();
 		intent.putExtra("author", author);
@@ -52,5 +52,19 @@ public class ManifestEditorActivity extends Activity implements OnClickListener 
 		// Handle the validations
 		Button validate = (Button) findViewById(R.id.me_validate);
 		validate.setOnClickListener(this);
+
+		// If there's data in the intent, fill it
+		Bundle extras = getIntent().getExtras();
+		if (extras.containsKey("author")) {
+			((EditText) findViewById(R.id.me_author)).setText(extras
+					.getString("author"));
+			Log.v(TAG, "Author added: " + extras.getString("author"));
+		}
+		if (extras.containsKey("version")) {
+			((EditText) findViewById(R.id.me_version)).setText(extras
+					.getFloat("version") + "");
+			Log.v(TAG, "Version added: " + extras.getFloat("version"));
+
+		}
 	}
 }

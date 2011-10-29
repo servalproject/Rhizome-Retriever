@@ -20,7 +20,6 @@ import android.os.Bundle;
 import android.os.Environment;
 import android.os.Handler;
 import android.os.Message;
-import android.os.Messenger;
 import android.text.format.Formatter;
 import android.util.Log;
 import android.view.ContextMenu;
@@ -62,7 +61,7 @@ public class Main extends ListActivity implements OnClickListener {
 
 	/** The thread that looks for updates */
 	private PeerWatcher pWatcher;
-	
+
 	/** Listening port for the server */
 	public static final int SERVER_PORT = 6666;
 
@@ -98,22 +97,38 @@ public class Main extends ListActivity implements OnClickListener {
 
 	/**
 	 * Import a file in the Rhizome directory. Generates automatically the
-	 * associated meta file, amd ask the user the relevant informations for
-	 * building a manifest file.
+	 * associated meta file, and ask the user the relevant informations for
+	 * building a manifest file. If the file already exists (ie, we're updating
+	 * the file), takes it into account and copy values from previous manifest
+	 * and increase the version number.
 	 * 
-	 * @param fileName
+	 * @param filePath
 	 *            The path of the file we need to import
 	 */
-	private void importFile(String fileName) {
+	private void importFile(String filePath) {
 		try {
-			File file = new File(fileName);
+			File file = new File(filePath);
 			// Move the actual file
 			RhizomeUtils.CopyFileToDir(file, RhizomeUtils.dirRhizome);
+
 			// Ask data for creating the Manifest
 			Intent myIntent = new Intent(this.getBaseContext(),
 					ManifestEditorActivity.class);
 			myIntent.putExtra("fileName", file.getName());
+
+			// Check if the manifest already exists
+			RhizomeFile rhizomeFile = new RhizomeFile(RhizomeUtils.dirRhizome,
+					file.getName());
+			if (rhizomeFile.getManifest().exists()) {
+				Log.v(TAG, "We're updatingÉ");
+				// Add extra intent data (version ++)
+				myIntent.putExtra("author", rhizomeFile.getAuthor());
+				myIntent.putExtra("version", rhizomeFile.getVersion() + 1);
+			}
+
+			// Send intent
 			startActivityForResult(myIntent, FILL_MANIFEST);
+
 			// --> the result will be back in onAcRes
 
 		} catch (IOException e) {
@@ -256,6 +271,11 @@ public class Main extends ListActivity implements OnClickListener {
 				goToast("Error while reading the manifest.");
 			}
 			return true;
+		case R.id.cm_update:
+			mFileDialog = new FolderPicker(this, this, android.R.style.Theme,
+					true);
+			mFileDialog.show();
+			return true;
 		default:
 			return super.onContextItemSelected(item);
 		}
@@ -273,12 +293,13 @@ public class Main extends ListActivity implements OnClickListener {
 
 		// Setup the UI
 		setUpUI();
-		
+
 		// Setup and start the peer list stuff
 		BatmanPeerList peerList = new BatmanPeerList();
-		BatmanServiceClient bsc = new BatmanServiceClient(getApplicationContext(), peerList);
+		BatmanServiceClient bsc = new BatmanServiceClient(
+				getApplicationContext(), peerList);
 		new Thread(bsc).start();
-		
+
 		// Launch the updater thread with the peer list object
 		pWatcher = new PeerWatcher(peerList);
 		pWatcher.start();
@@ -291,6 +312,7 @@ public class Main extends ListActivity implements OnClickListener {
 			int ipAddress = wifiInfo.getIpAddress();
 			String stringIP = Formatter.formatIpAddress(ipAddress);
 
+			@SuppressWarnings("unused")
 			SimpleWebServer server = new SimpleWebServer(
 					RhizomeUtils.dirRhizome, stringIP, 6666);
 		} catch (IOException e) {

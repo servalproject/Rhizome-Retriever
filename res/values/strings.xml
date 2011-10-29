@@ -31,5 +31,6 @@
 	<string name="mv_sign_ok_p">Cert sign?</string>
 	<string name="mv_back">Back</string>
 	<string name="mv_name">View the manifest</string>
+	<string name="cm_update">Update to a new version</string>
 	
 </resources>
